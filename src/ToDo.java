@@ -8,21 +8,19 @@ import java.util.Scanner;
  */
 public class ToDo {
     static void printTodos(ArrayList<ToDoItem> todos) {
-        int todoNum = 1;
         for (ToDoItem todo : todos) {
             String checkBox = "[ ]";
             if (todo.isDone) {
                 checkBox = "[x]";
             }
-            String line = String.format("%d. %s %s", todoNum, checkBox, todo.text);
+            String line = String.format("%d. %s %s", todo.id, checkBox, todo.text);
             System.out.println(line);
-            todoNum++;
         }
     }
 
     static void insertTodo(Connection conn, String text) throws SQLException { //two arguments
         //create a Prepared Statement
-        PreparedStatement stmt = conn.prepareStatement("INSERT INTO todos VALUES (?, false)");
+        PreparedStatement stmt = conn.prepareStatement("INSERT INTO todos VALUES (NULL, ?, false)");
         stmt.setString(1, text); //1 is referring to the first question mark. If we had multiple question marks, it would know what to refer to
         stmt.execute();
     }
@@ -32,9 +30,10 @@ public class ToDo {
         ResultSet results = stmt.executeQuery("SELECT * FROM todos");
         ArrayList<ToDoItem> todos = new ArrayList();
         while (results.next()) {
+            int id = results.getInt("id"); //pull out the id
             String text = results.getString("text");
             boolean isDone = results.getBoolean("is_done");
-            ToDoItem item = new ToDoItem(text, isDone);
+            ToDoItem item = new ToDoItem(id, text, isDone); //pass id, text, isDone into the constructor
             todos.add(item); //adds a line to the database
         }
 
@@ -42,7 +41,7 @@ public class ToDo {
     }
 
     static void toggleTodo (Connection conn, int selectNum) throws SQLException { //making it toggle btwn done and not done
-        PreparedStatement stmt = conn.prepareStatement("UPDATE todos SET is_done = NOT is_done WHERE ROWNUM = ?"); //built in way to get the rownumber
+        PreparedStatement stmt = conn.prepareStatement("UPDATE todos SET is_done = NOT is_done WHERE id = ?"); //built in way to get the rownumber
         stmt.setInt(1, selectNum);
         stmt.execute();
     }
@@ -50,7 +49,7 @@ public class ToDo {
     public static void main(String[] args) throws SQLException {
         Connection conn = DriverManager.getConnection("jdbc:h2:./main");
         Statement stmt = conn.createStatement();
-        stmt.execute("CREATE TABLE IF NOT EXISTS todos (text VARCHAR, is_done BOOLEAN)"); //creates our table for us
+        stmt.execute("CREATE TABLE IF NOT EXISTS todos (id IDENTITY, text VARCHAR, is_done BOOLEAN)"); //creates our table for us
 
 //        no longer storing a global arraylist (as below) so it can be deleted
 //        ArrayList<ToDoItem> todos = new ArrayList();
